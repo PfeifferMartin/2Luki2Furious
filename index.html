@@ -271,32 +271,36 @@
 
         // Background / Piste Drawing
         function drawPiste() {
-            // 1. Clean Blue-White Slope Gradient
-            // Darker at edges to focus eyes on center, brighter in middle
+            // 1. Solid White Base
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Groomed Snow Texture (Stripes)
+            // Use a pattern or loop for crisp lines
+            ctx.strokeStyle = '#e6f2ff'; // Very light blue
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            // Offset for speed sensation
+            const offset = (Date.now() * speed * 0.2) % 40;
+            
+            // Draw mostly in the center area where action happens
+            for (let x = 0; x < canvas.width; x += 30) {
+                 ctx.moveTo(x, 0);
+                 ctx.lineTo(x, canvas.height);
+            }
+            ctx.stroke();
+
+            // 3. Side Powder / Vignette
+            // Soft blue edges to frame the track
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            gradient.addColorStop(0, '#bbdefb');   // Darker Blue edge
-            gradient.addColorStop(0.15, '#e3f2fd'); // Light Blue transition
-            gradient.addColorStop(0.5, '#ffffff');  // Pure White Center
-            gradient.addColorStop(0.85, '#e3f2fd'); // Light Blue transition
-            gradient.addColorStop(1, '#bbdefb');    // Darker Blue edge
+            gradient.addColorStop(0, '#bbdefb');
+            gradient.addColorStop(0.1, 'rgba(255,255,255,0)');
+            gradient.addColorStop(0.9, 'rgba(255,255,255,0)');
+            gradient.addColorStop(1, '#bbdefb');
             
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 2. Side Markers (Piste markers)
-            // Simple red/blue lines on the very edges to show speed without cluttering center
-            const markerY = (Date.now() * speed * 0.5) % 100;
-            ctx.fillStyle = 'rgba(231, 76, 60, 0.6)'; // Red markers
-            for(let y = markerY - 100; y < canvas.height; y += 200) {
-                ctx.beginPath();
-                ctx.arc(20, y, 5, 0, Math.PI * 2); // Left markers
-                ctx.arc(canvas.width - 20, y, 5, 0, Math.PI * 2); // Right markers
-                ctx.fill();
-            }
-        }
-
-        function updateParticles() {
-            // Removed distracting particles for cleaner visibility
         }
 
         // Game Objects
@@ -331,27 +335,39 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.scale, this.scale);
-                ctx.font = '50px Arial';
+                ctx.font = 'bold 50px Segoe UI Emoji, Apple Color Emoji, sans-serif'; // Force Emoji Font
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
-                // Better shadow for contrast
-                ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Darker shadow
+                // Solid Shadow (not blurry)
+                ctx.fillStyle = 'rgba(0,0,0,0.15)'; 
                 ctx.beginPath();
-                ctx.ellipse(0, 25, 25, 10, 0, 0, Math.PI*2);
+                ctx.ellipse(0, 22, 22, 8, 0, 0, Math.PI*2);
                 ctx.fill();
 
                 if (this.type === 'beer') {
-                    // Gold Glow for Beer
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#f1c40f'; // Bright Gold
+                    // BEER: Gold Glow + Outline
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#FFD700'; // Gold
                     
-                    // Bobbing animation
-                    const bob = Math.sin(Date.now() / 150) * 8; // Faster bob
+                    const bob = Math.sin(Date.now() / 150) * 8;
                     ctx.fillText(this.emoji, 0, bob);
+                    
+                    // Stroke for pop
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#fff';
+                    ctx.strokeText(this.emoji, 0, bob);
+
                 } else {
-                    // Slight white outline for trees to separate from potential dark patches
-                    ctx.shadowBlur = 0;
+                    // OBSTACLES: No Blur, Stark Outline
+                    ctx.shadowBlur = 0; // Disable blur completely for solidity
+                    
+                    // White outline to separate from background
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.strokeText(this.emoji, 0, 0);
+                    
+                    // Draw Emoji
                     ctx.fillText(this.emoji, 0, 0);
                 }
                 ctx.restore();
