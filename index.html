@@ -202,8 +202,8 @@
         // Game State
         let gameRunning = false;
         let beersCollected = 0;
-        let speed = 6;
-        let objects = []; 
+        let speed = 5; // Slower start (was 6)
+        let objects = [];  
         let particles = []; // Snow particles
         let animationId;
         
@@ -468,7 +468,7 @@
                         beersCollected++;
                         scoreEl.innerText = `🍺 ${beersCollected} / 15`;
                         
-                        if (beersCollected % 3 === 0) speed += 1; // Increase speed
+                        if (beersCollected % 5 === 0) speed += 0.5; // Gentler speed up (was %3 and +1)
 
                         if (beersCollected >= 15) {
                             gameWin();
@@ -517,7 +517,7 @@
         function resetGame() {
             gameRunning = true;
             beersCollected = 0;
-            speed = 7;
+            speed = 5; // Start slower (was 7)
             objects = [];
             particles = [];
             scoreEl.innerText = `🍺 0 / 15`;
