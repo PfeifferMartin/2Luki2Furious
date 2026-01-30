@@ -1,3 +1,4 @@
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body, html {
             margin: 0;
@@ -75,22 +76,25 @@
         /* Content Styling */
         .modal-content {
             background: white;
-            padding: 2.5rem;
+            padding: 2rem;
             border-radius: 25px;
-            max-width: 90%;
-            width: 450px;
+            max-width: 95%;
+            width: 400px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
             animation: slideUp 0.5s ease-out;
             position: relative;
             color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        h1 { color: #2c3e50; margin-top: 0; font-size: 2.2rem; margin-bottom: 0.5rem; }
-        h2 { color: #e74c3c; font-size: 1.6rem; margin-bottom: 1.5rem; }
-        p { color: #555; line-height: 1.6; font-size: 1.15rem; margin-bottom: 1.5rem; }
+        h1 { color: #2c3e50; margin-top: 0; font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2; }
+        h2 { color: #e74c3c; font-size: 1.8rem; margin-bottom: 1.5rem; }
+        p { color: #555; line-height: 1.5; font-size: 1.1rem; margin-bottom: 1.2rem; }
         
         .crash-text {
-            font-size: 5rem;
+            font-size: 15vw; /* Responsive font size */
             font-weight: 900;
             color: #fff;
             text-shadow: 4px 4px 0px #c0392b;
@@ -102,21 +106,30 @@
             background: linear-gradient(to bottom, #3498db, #2980b9);
             color: white;
             border: none;
-            padding: 18px 45px;
-            font-size: 1.4rem;
+            padding: 20px 50px; /* Larger touch target */
+            font-size: 1.5rem;
             border-radius: 50px;
             cursor: pointer;
             transition: transform 0.1s, box-shadow 0.2s;
             font-weight: bold;
             box-shadow: 0 6px 0 #1c5980;
-            margin-top: 10px;
+            margin-top: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            width: 100%; /* Full width button on mobile */
+            max-width: 300px;
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 0 #1c5980; }
         button:active { transform: translateY(4px); box-shadow: 0 0 0 #1c5980; }
 
         .hidden { display: none !important; }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .modal-content { padding: 1.5rem; width: 90%; }
+            button { padding: 18px 0; font-size: 1.3rem; }
+            #scoreBoard { font-size: 1.2rem; padding: 8px 15px; }
+        }
 
         @keyframes slideUp {
             from { transform: translateY(50px); opacity: 0; }
@@ -169,7 +182,7 @@
                 <strong>1x SKI-TAG & GUTSCHEIN! 🎿🏔️</strong>
             </p>
             <p style="font-size: 0.9rem; color: #888; margin-top: 1rem;">
-                Von [Dein Name] & [Name des Freundes]
+                Von Martin & Simon
             </p>
             <button onclick="restartGame()">Nochmal?</button>
         </div>
@@ -185,7 +198,7 @@
 
         // Assets
         const playerImg = new Image();
-        playerImg.src = 'Luki.png'; 
+        playerImg.src = 'luki_ski.png'; 
 
         // Game State
         let gameRunning = false;
@@ -193,7 +206,6 @@
         let speed = 6;
         let objects = []; 
         let particles = []; // Snow particles
-        let trackOffset = 0; // For moving background
         let animationId;
         
         // Canvas Sizing
@@ -207,38 +219,31 @@
         // Player
         const player = {
             x: canvas.width / 2,
-            y: canvas.height * 0.25,
-            width: 70,
-            height: 70,
+            y: canvas.height * 0.75, 
+            width: 100, // Increased size
+            height: 100,
+            tilt: 0,
             draw: function() {
                 // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.beginPath();
-                ctx.ellipse(this.x, this.y + 35, 30, 10, 0, 0, Math.PI*2);
+                ctx.ellipse(this.x, this.y + 50, 40, 12, 0, 0, Math.PI*2);
                 ctx.fill();
 
-                // Draw Luki
                 ctx.save();
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
+                ctx.translate(this.x, this.y);
                 
+                // Tilt effect when turning
+                const tiltAngle = (targetX - this.x) * 0.005;
+                ctx.rotate(tiltAngle);
+
+                // Draw Luki (Image only, no drawn skis)
                 if (playerImg.complete) {
-                    ctx.drawImage(playerImg, this.x - 35, this.y - 35, 70, 70);
+                    ctx.drawImage(playerImg, -50, -50, 100, 100);
                 } else {
                     ctx.fillStyle = '#e74c3c';
-                    ctx.fillRect(this.x - 35, this.y - 35, 70, 70);
+                    ctx.fillRect(-50, -50, 100, 100);
                 }
-                ctx.restore();
-                
-                // Add Skis
-                ctx.save();
-                ctx.translate(this.x, this.y + 30);
-                // Rotate skis slightly based on movement could be added here
-                ctx.fillStyle = '#333';
-                ctx.fillRect(-25, 0, 10, 40); // Left ski
-                ctx.fillRect(15, 0, 10, 40);  // Right ski
                 ctx.restore();
             }
         };
@@ -275,99 +280,137 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Groomed Snow Texture (Stripes)
-            // Use a pattern or loop for crisp lines
-            ctx.strokeStyle = '#e6f2ff'; // Very light blue
-            ctx.lineWidth = 3;
-            ctx.beginPath();
+            // 2. Snow Texture / Bumps moving UP (creating illusion of moving DOWN)
+            ctx.fillStyle = '#e6f2ff';
+            const time = Date.now() * speed * 0.1;
             
-            // Offset for speed sensation
-            const offset = (Date.now() * speed * 0.2) % 40;
-            
-            // Draw mostly in the center area where action happens
-            for (let x = 0; x < canvas.width; x += 30) {
-                 ctx.moveTo(x, 0);
-                 ctx.lineTo(x, canvas.height);
+            // Draw random "bumps" that scroll up
+            // Using a seeded random approach for consistency would be better, but simple loop works
+            for (let i = 0; i < 20; i++) {
+                // Fixed positions based on index
+                const bx = ((i * 137.5) % canvas.width);
+                const by = ((i * 90 + time) % canvas.height);
+                
+                ctx.beginPath();
+                ctx.arc(bx, by, 10 + (i%5)*2, 0, Math.PI*2);
+                ctx.fill();
             }
-            ctx.stroke();
 
             // 3. Side Powder / Vignette
-            // Soft blue edges to frame the track
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
             gradient.addColorStop(0, '#bbdefb');
-            gradient.addColorStop(0.1, 'rgba(255,255,255,0)');
-            gradient.addColorStop(0.9, 'rgba(255,255,255,0)');
+            gradient.addColorStop(0.15, 'rgba(255,255,255,0)');
+            gradient.addColorStop(0.85, 'rgba(255,255,255,0)');
             gradient.addColorStop(1, '#bbdefb');
             
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
+        // Snow Particles
+        function updateParticles() {
+            // Add new particles
+            if (particles.length < 50 && Math.random() < 0.2) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: -10,
+                    size: Math.random() * 3 + 1,
+                    speed: Math.random() * 2 + speed * 1.5 // Move faster than ground for "wind" effect?
+                    // Actually if we ski down, snow might fly UP if it's static in air?
+                    // Or if it's falling, it falls down.
+                    // Let's make it fly UP relative to player (fast speed)
+                });
+            }
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.y += p.speed; // Move DOWN screen (falling + player speed?)
+                // If player is skiing down fast, "static" air particles should move UP relative to screen?
+                // No, usually snow falls down. Let's just make it fall down fast.
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.y > canvas.height) particles.splice(i, 1);
+            }
+        }
+
         // Game Objects
         class GameObject {
             constructor() {
-                this.type = Math.random() > 0.7 ? 'beer' : 'obstacle'; // 30% Chance for Beer (was 15%)
-                this.size = 50;
-                this.x = Math.random() * (canvas.width - 100) + 50; 
-                this.y = canvas.height + 60;
-                this.speed = speed;
+                this.type = Math.random() > 0.7 ? 'beer' : 'obstacle';
+                
+                // Spawn at TOP
+                this.x = Math.random() * (canvas.width - 40) + 20; 
+                this.y = -100; // Start further above screen
+                this.baseSpeed = speed;
                 
                 if (this.type === 'obstacle') {
-                    // Only Trees and Huts as requested
                     const choices = ['🌲', '🌲', '🌲', '🌲', '🌲', '🏠', '🛖'];
                     this.emoji = choices[Math.floor(Math.random() * choices.length)];
-                    this.scale = 1 + Math.random() * 0.3; 
+                    this.scaleVar = 0.9 + Math.random() * 0.3; // Smaller obstacles (was 1.2+)
                 } else {
                     this.emoji = '🍺';
-                    this.scale = 1.2;
+                    this.scaleVar = 1.5; // Bigger beer
                 }
                 
                 this.collected = false;
             }
 
             update() {
-                this.y -= this.speed;
+                this.y += this.baseSpeed;
             }
 
             draw() {
                 if (this.collected) return;
                 
+                // Perspective Scaling
+                // Original: 0.5 at top, 1.3 at bottom (growth = 0.8)
+                // New: 0.6 at top, 1.0 at bottom (growth = 0.4) - 50% less growth
+                const perspective = 0.6 + (this.y / canvas.height) * 0.4; 
+                const drawScale = this.scaleVar * perspective;
+
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                ctx.scale(this.scale, this.scale);
-                ctx.font = 'bold 50px Segoe UI Emoji, Apple Color Emoji, sans-serif'; // Force Emoji Font
+                ctx.scale(drawScale, drawScale);
+                
+                // Huge Font for Mobile Visibility
+                ctx.font = 'bold 80px Segoe UI Emoji, Apple Color Emoji, sans-serif'; 
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
-                // Solid Shadow (not blurry)
-                ctx.fillStyle = 'rgba(0,0,0,0.15)'; 
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
                 ctx.beginPath();
-                ctx.ellipse(0, 22, 22, 8, 0, 0, Math.PI*2);
+                ctx.ellipse(0, 35, 30, 10, 0, 0, Math.PI*2);
                 ctx.fill();
 
+                // Reset shadow/styles to ensure full opacity
+                ctx.globalAlpha = 1.0;
+
                 if (this.type === 'beer') {
-                    // BEER: Gold Glow + Outline
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#FFD700'; // Gold
+                    // Glow effect
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#FFD700';
+                    const bob = Math.sin(Date.now() / 150) * 10;
                     
-                    const bob = Math.sin(Date.now() / 150) * 8;
                     ctx.fillText(this.emoji, 0, bob);
                     
-                    // Stroke for pop
-                    ctx.lineWidth = 1;
+                    // Stronger outline
+                    ctx.lineWidth = 2;
                     ctx.strokeStyle = '#fff';
                     ctx.strokeText(this.emoji, 0, bob);
-
                 } else {
-                    // OBSTACLES: No Blur, Stark Outline
-                    ctx.shadowBlur = 0; // Disable blur completely for solidity
+                    // Dark outline and shadow for better visibility on snow
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
                     
-                    // White outline to separate from background
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#2c3e50'; // Dark blue-grey outline
+                    ctx.lineJoin = 'round';
                     ctx.strokeText(this.emoji, 0, 0);
-                    
-                    // Draw Emoji
                     ctx.fillText(this.emoji, 0, 0);
                 }
                 ctx.restore();
@@ -377,30 +420,37 @@
         function checkCollision(p, obj) {
             if (obj.collected) return false;
             
-            const dx = p.x - obj.x;
-            const dy = p.y - obj.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const dy = Math.abs(p.y - obj.y);
+            const dx = Math.abs(p.x - obj.x);
             
-            const hitDist = obj.type === 'beer' ? 60 : 45;
-            return distance < hitDist;
+            // Larger hitboxes for mobile
+            if (obj.type === 'beer') {
+                return (dy < 80 && dx < 80);
+            }
+            
+            // Trees
+            return (dy < 55 && dx < 45);
         }
 
         function update() {
             if (!gameRunning) return;
 
-            // Player Physics
-            player.x += (targetX - player.x) * 0.12;
+            // Player Movement Smoothing
+            player.x += (targetX - player.x) * 0.15;
+            // Clamp player
             if (player.x < 30) player.x = 30;
             if (player.x > canvas.width - 30) player.x = canvas.width - 30;
 
-            // Draw Background
+            // Draw
             drawPiste();
-            updateParticles();
-
+            
             // Spawning
-            if (Math.random() < 0.05 + (beersCollected * 0.002)) {
+            if (Math.random() < 0.025 + (beersCollected * 0.001)) {
                 objects.push(new GameObject());
             }
+
+            // Sort objects by Y so closer ones draw on top
+            objects.sort((a, b) => a.y - b.y);
 
             // Objects Loop
             for (let i = objects.length - 1; i >= 0; i--) {
@@ -419,8 +469,7 @@
                         beersCollected++;
                         scoreEl.innerText = `🍺 ${beersCollected} / 15`;
                         
-                        // Speed up
-                        if (beersCollected % 2 === 0) speed += 0.5;
+                        if (beersCollected % 3 === 0) speed += 1; // Increase speed
 
                         if (beersCollected >= 15) {
                             gameWin();
@@ -430,10 +479,12 @@
                     }
                 }
 
-                if (obj.y < -100) objects.splice(i, 1);
+                if (obj.y > canvas.height + 100) objects.splice(i, 1);
             }
-
-            player.draw();
+            
+            updateParticles();
+            player.draw(); // Draw player ON TOP of everything
+            
             animationId = requestAnimationFrame(update);
         }
 
@@ -446,7 +497,6 @@
             gameRunning = false;
             crashOverlay.style.display = 'flex';
             
-            // Camera Shake
             const intensity = 10;
             canvas.style.transform = `translate(${intensity}px, ${intensity}px)`;
             setTimeout(() => canvas.style.transform = `translate(-${intensity}px, -${intensity}px)`, 50);
@@ -468,7 +518,7 @@
         function resetGame() {
             gameRunning = true;
             beersCollected = 0;
-            speed = 7; // Start slightly faster
+            speed = 7;
             objects = [];
             particles = [];
             scoreEl.innerText = `🍺 0 / 15`;
@@ -513,4 +563,3 @@
     </script>
 </body>
 </html>
-
