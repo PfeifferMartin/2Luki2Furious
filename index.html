@@ -1,0 +1,500 @@
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fff;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* HUD */
+        #scoreBoard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 2px solid #3498db;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Screens */
+        .screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #startScreen {
+            background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);
+        }
+
+        #crashOverlay {
+            background: rgba(180, 0, 0, 0.4);
+            display: none;
+            pointer-events: none;
+            z-index: 20;
+            backdrop-filter: blur(2px);
+        }
+
+        #winModal {
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            color: white;
+        }
+
+        /* Content Styling */
+        .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 25px;
+            max-width: 90%;
+            width: 450px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease-out;
+            position: relative;
+            color: #333;
+        }
+
+        h1 { color: #2c3e50; margin-top: 0; font-size: 2.2rem; margin-bottom: 0.5rem; }
+        h2 { color: #e74c3c; font-size: 1.6rem; margin-bottom: 1.5rem; }
+        p { color: #555; line-height: 1.6; font-size: 1.15rem; margin-bottom: 1.5rem; }
+        
+        .crash-text {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 4px 4px 0px #c0392b;
+            transform: rotate(-10deg);
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        button {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            font-size: 1.4rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            font-weight: bold;
+            box-shadow: 0 6px 0 #1c5980;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 0 #1c5980; }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #1c5980; }
+
+        .hidden { display: none !important; }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0) rotate(-10deg); }
+            20%, 80% { transform: translate3d(4px, 0, 0) rotate(-10deg); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0) rotate(-10deg); }
+            40%, 60% { transform: translate3d(8px, 0, 0) rotate(-10deg); }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <!-- HUD -->
+    <div id="scoreBoard">🍺 0 / 15</div>
+    
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen-overlay">
+        <h1>Lukis Ski & Bier ⛷️🍺</h1>
+        <div class="modal-content">
+            <p style="font-size: 1.3rem;"><strong>Servus Luki!</strong></p>
+            <p>Die Piste ruft. Sammle <strong>15 Bier</strong> für die Hütte, aber pass auf die Bäume auf!</p>
+            <div style="margin: 30px 0; font-size: 1.2rem; color: #7f8c8d;">
+                <p>👈 Steuern 👉</p>
+            </div>
+            <button onclick="startGame()">Abfahrt!</button>
+        </div>
+    </div>
+
+    <!-- Crash Overlay -->
+    <div id="crashOverlay" class="screen-overlay">
+        <div class="crash-text">CRASH! 💥</div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Win Modal -->
+    <div id="winModal" class="screen-overlay">
+        <div class="modal-content">
+            <h1>STARK! 30 JAHRE!</h1>
+            <h2>Happy Birthday, Lukas! 🎉</h2>
+            <p>
+                Bierversorgung gesichert! Du hast dir eine Pause verdient.<br><br>
+                Dein Geschenk ist echt:<br>
+                <strong>1x SKI-TAG & GUTSCHEIN! 🎿🏔️</strong>
+            </p>
+            <p style="font-size: 0.9rem; color: #888; margin-top: 1rem;">
+                Von [Dein Name] & [Name des Freundes]
+            </p>
+            <button onclick="restartGame()">Nochmal?</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreBoard');
+        const startScreen = document.getElementById('startScreen');
+        const crashOverlay = document.getElementById('crashOverlay');
+        const winModal = document.getElementById('winModal');
+
+        // Assets
+        const playerImg = new Image();
+        playerImg.src = 'Luki.png'; 
+
+        // Game State
+        let gameRunning = false;
+        let beersCollected = 0;
+        let speed = 6;
+        let objects = []; 
+        let particles = []; // Snow particles
+        let trackOffset = 0; // For moving background
+        let animationId;
+        
+        // Canvas Sizing
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Player
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height * 0.25,
+            width: 70,
+            height: 70,
+            draw: function() {
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y + 35, 30, 10, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Draw Luki
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                
+                if (playerImg.complete) {
+                    ctx.drawImage(playerImg, this.x - 35, this.y - 35, 70, 70);
+                } else {
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.fillRect(this.x - 35, this.y - 35, 70, 70);
+                }
+                ctx.restore();
+                
+                // Add Skis
+                ctx.save();
+                ctx.translate(this.x, this.y + 30);
+                // Rotate skis slightly based on movement could be added here
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-25, 0, 10, 40); // Left ski
+                ctx.fillRect(15, 0, 10, 40);  // Right ski
+                ctx.restore();
+            }
+        };
+
+        // Input
+        let targetX = player.x;
+
+        function handleInput(x) {
+            if (!gameRunning) return;
+            targetX = x;
+        }
+
+        window.addEventListener('mousemove', e => handleInput(e.clientX));
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            handleInput(e.touches[0].clientX);
+        }, { passive: false });
+        window.addEventListener('touchstart', e => {
+             if(gameRunning) {
+                 e.preventDefault();
+                 handleInput(e.touches[0].clientX);
+             }
+        }, { passive: false });
+        
+        window.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft') targetX -= 50;
+            if (e.key === 'ArrowRight') targetX += 50;
+        });
+
+        // Background / Piste Drawing
+        function drawPiste() {
+            // 1. Clean Blue-White Slope Gradient
+            // Darker at edges to focus eyes on center, brighter in middle
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, '#bbdefb');   // Darker Blue edge
+            gradient.addColorStop(0.15, '#e3f2fd'); // Light Blue transition
+            gradient.addColorStop(0.5, '#ffffff');  // Pure White Center
+            gradient.addColorStop(0.85, '#e3f2fd'); // Light Blue transition
+            gradient.addColorStop(1, '#bbdefb');    // Darker Blue edge
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Side Markers (Piste markers)
+            // Simple red/blue lines on the very edges to show speed without cluttering center
+            const markerY = (Date.now() * speed * 0.5) % 100;
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.6)'; // Red markers
+            for(let y = markerY - 100; y < canvas.height; y += 200) {
+                ctx.beginPath();
+                ctx.arc(20, y, 5, 0, Math.PI * 2); // Left markers
+                ctx.arc(canvas.width - 20, y, 5, 0, Math.PI * 2); // Right markers
+                ctx.fill();
+            }
+        }
+
+        function updateParticles() {
+            // Removed distracting particles for cleaner visibility
+        }
+
+        // Game Objects
+        class GameObject {
+            constructor() {
+                this.type = Math.random() > 0.7 ? 'beer' : 'obstacle'; // 30% Chance for Beer (was 15%)
+                this.size = 50;
+                this.x = Math.random() * (canvas.width - 100) + 50; 
+                this.y = canvas.height + 60;
+                this.speed = speed;
+                
+                if (this.type === 'obstacle') {
+                    // Only Trees and Huts as requested
+                    const choices = ['🌲', '🌲', '🌲', '🌲', '🌲', '🏠', '🛖'];
+                    this.emoji = choices[Math.floor(Math.random() * choices.length)];
+                    this.scale = 1 + Math.random() * 0.3; 
+                } else {
+                    this.emoji = '🍺';
+                    this.scale = 1.2;
+                }
+                
+                this.collected = false;
+            }
+
+            update() {
+                this.y -= this.speed;
+            }
+
+            draw() {
+                if (this.collected) return;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+                ctx.font = '50px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Better shadow for contrast
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Darker shadow
+                ctx.beginPath();
+                ctx.ellipse(0, 25, 25, 10, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                if (this.type === 'beer') {
+                    // Gold Glow for Beer
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#f1c40f'; // Bright Gold
+                    
+                    // Bobbing animation
+                    const bob = Math.sin(Date.now() / 150) * 8; // Faster bob
+                    ctx.fillText(this.emoji, 0, bob);
+                } else {
+                    // Slight white outline for trees to separate from potential dark patches
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(this.emoji, 0, 0);
+                }
+                ctx.restore();
+            }
+        }
+
+        function checkCollision(p, obj) {
+            if (obj.collected) return false;
+            
+            const dx = p.x - obj.x;
+            const dy = p.y - obj.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const hitDist = obj.type === 'beer' ? 60 : 45;
+            return distance < hitDist;
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            // Player Physics
+            player.x += (targetX - player.x) * 0.12;
+            if (player.x < 30) player.x = 30;
+            if (player.x > canvas.width - 30) player.x = canvas.width - 30;
+
+            // Draw Background
+            drawPiste();
+            updateParticles();
+
+            // Spawning
+            if (Math.random() < 0.05 + (beersCollected * 0.002)) {
+                objects.push(new GameObject());
+            }
+
+            // Objects Loop
+            for (let i = objects.length - 1; i >= 0; i--) {
+                let obj = objects[i];
+                obj.update();
+                obj.draw();
+
+                // Collision
+                if (checkCollision(player, obj)) {
+                    if (obj.type === 'obstacle') {
+                        gameOver();
+                        return;
+                    } else if (obj.type === 'beer') {
+                        obj.collected = true;
+                        objects.splice(i, 1);
+                        beersCollected++;
+                        scoreEl.innerText = `🍺 ${beersCollected} / 15`;
+                        
+                        // Speed up
+                        if (beersCollected % 2 === 0) speed += 0.5;
+
+                        if (beersCollected >= 15) {
+                            gameWin();
+                            return;
+                        }
+                        continue;
+                    }
+                }
+
+                if (obj.y < -100) objects.splice(i, 1);
+            }
+
+            player.draw();
+            animationId = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            resetGame();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            crashOverlay.style.display = 'flex';
+            
+            // Camera Shake
+            const intensity = 10;
+            canvas.style.transform = `translate(${intensity}px, ${intensity}px)`;
+            setTimeout(() => canvas.style.transform = `translate(-${intensity}px, -${intensity}px)`, 50);
+            setTimeout(() => canvas.style.transform = `translate(${intensity}px, -${intensity}px)`, 100);
+            setTimeout(() => canvas.style.transform = `translate(0, 0)`, 150);
+
+            setTimeout(() => {
+                crashOverlay.style.display = 'none';
+                startScreen.classList.remove('hidden');
+            }, 1800);
+        }
+
+        function gameWin() {
+            gameRunning = false;
+            winModal.style.display = 'flex';
+            launchConfetti();
+        }
+
+        function resetGame() {
+            gameRunning = true;
+            beersCollected = 0;
+            speed = 7; // Start slightly faster
+            objects = [];
+            particles = [];
+            scoreEl.innerText = `🍺 0 / 15`;
+            winModal.style.display = 'none';
+            crashOverlay.style.display = 'none';
+            targetX = canvas.width / 2;
+            player.x = canvas.width / 2;
+            
+            if (animationId) cancelAnimationFrame(animationId);
+            update();
+        }
+
+        function restartGame() {
+            winModal.style.display = 'none';
+            startGame();
+        }
+
+        function launchConfetti() {
+            const duration = 5 * 1000;
+            const end = Date.now() + duration;
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#3498db', '#f1c40f', '#e74c3c']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#3498db', '#f1c40f', '#e74c3c']
+                });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        // Init
+        drawPiste();
+    </script>
+</body>
+</html>
+
